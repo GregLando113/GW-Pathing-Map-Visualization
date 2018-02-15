@@ -15,6 +15,8 @@ struct GWMapData {
 	unsigned mapfile;
 	float spawnx;
 	float spawny;
+	bool selected;
+	bool visible;
 };
 
 class Viewer {

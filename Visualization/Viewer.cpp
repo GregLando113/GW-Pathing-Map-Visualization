@@ -66,6 +66,8 @@ void Viewer::InitializeWindow() {
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+
+	Resize(r.right * 0.75, r.bottom * 0.75);
 }
 
 void Viewer::Resize(int width, int height) {
@@ -135,6 +137,9 @@ void Viewer::LoadMapData(const char* file)
 		mapdata_[idx].spawny = atof(seeker);
 		seeker = strchr(seeker, ',');
 		seeker++;
+
+		mapdata_[idx].selected = false;
+		mapdata_[idx].visible = true;
 	}
 	
 
@@ -197,12 +202,10 @@ void Viewer::Execute() {
 
 		
 
-		if (refresh_) {
-			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-			glClear(GL_COLOR_BUFFER_BIT);
+		//if (refresh_) {
 			RenderPMap();
 			refresh_ = false;
-		}
+		//}
 
 		ImGui_ImplSdlGL2_NewFrame(window);
 
@@ -248,8 +251,19 @@ void Viewer::Execute() {
 			if (ImGui::Begin("Map List")) {
 				ImGui::Columns(4, NULL, false);
 
+				ImGui::SetColumnWidth(-1, 1);
+				ImGui::Text("");
+				for (unsigned i = 0; i < mapdatacount_; ++i) {
+					ImGui::PushID(i);
+					if (ImGui::Selectable("##Load", &mapdata_[i].selected, ImGuiSelectableFlags_SpanAllColumns)) {
+						SetPMap(mapdata_[i].mapfile);
+					}
+					ImGui::PopID();
+				}
+
+				ImGui::NextColumn();
 				ImGui::SetColumnWidth(-1, 40);
-				ImGui::Text("Map ID");
+				ImGui::Text("ID");
 				for (unsigned i = 0; i < mapdatacount_; ++i) {
 					ImGui::Text("%d", mapdata_[i].mapid);
 				}
@@ -267,16 +281,6 @@ void Viewer::Execute() {
 				for (unsigned i = 0; i < mapdatacount_; ++i) {
 					ImGui::Text("%d", mapdata_[i].mapfile);
 				}
-
-				ImGui::NextColumn();
-				ImGui::SetColumnWidth(-1, 50);
-				ImGui::Text("");
-				for (unsigned i = 0; i < mapdatacount_; ++i) {
-					if (ImGui::Button("Load")) {
-						SetPMap(mapdata_[i].mapfile);
-					}
-				}
-
 			}
 			ImGui::End();
 
@@ -286,6 +290,8 @@ void Viewer::Execute() {
 	endRender:
 		ImGui::Render();
 		SDL_GL_SwapWindow(window);
+
+		SDL_Delay(1000 / 60);
 	}
 }
 
@@ -367,7 +373,7 @@ void Viewer::RenderPMap() {
 		//glEnd();
 	}
 
-
+	glPopMatrix();
 	
 }
 
