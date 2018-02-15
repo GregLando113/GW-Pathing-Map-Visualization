@@ -44,6 +44,7 @@ private:
 	Point2d translate_;
 	double ratio_;
 	GWMapData* mapdata_;
+	GWMapData* currentmap_;
 	unsigned mapdatacount_;
 
 public:
@@ -62,6 +63,8 @@ public:
 	void RenderPMap();
 
 	void Close();
+
+	void ScreenToWorld(Point2d& out, Point2d& in);
 
 	void HandleMouseDownEvent(SDL_MouseButtonEvent);
 	void HandleMouseUpEvent(SDL_MouseButtonEvent);

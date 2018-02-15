@@ -25,6 +25,7 @@ Viewer::Viewer() {
 	circles_ = false;
 	mapdata_ = nullptr;
 	mapdatacount_ = 0;
+	currentmap_ = nullptr;
 
 	int n_vertices = 50;
 	for (int i = 0; i < 50; ++i) {
@@ -159,7 +160,8 @@ DWORD WINAPI PmapExtractor(LPVOID ab)
 void Viewer::Execute() {
 	bool quit = false;
 	while (!quit) {
-		SDL_Delay(1);
+		SDL_Delay(1000 / 60);
+
 		// event handling
 		SDL_Event e;
 		while (SDL_PollEvent(&e) != 0) {
@@ -199,8 +201,6 @@ void Viewer::Execute() {
 				break;
 			}
 		}
-
-		
 
 		//if (refresh_) {
 			RenderPMap();
@@ -247,7 +247,19 @@ void Viewer::Execute() {
 		}
 		else {
 
-			ImGui::SetNextWindowSizeConstraints(ImVec2(400, 100), ImVec2(400, -1));
+			if (ImGui::Begin("Info")) {
+				Point2d lel = center_ - translate_;
+
+				ImGui::LabelText("Center", "(%f,%f)", center_.x(), center_.y());
+				ImGui::LabelText("Translate", "(%f,%f)", translate_.x(), translate_.y());
+				ImGui::LabelText("lel", "(%f,%f)", lel.x(), lel.y());
+				ImGui::LabelText("W/H", "(%d,%d)", width_, height_);
+				ImGui::LabelText("Scale", "%f", scale_);
+				ImGui::LabelText("Ratio", "%f", ratio_);
+			}
+			ImGui::End();
+
+			ImGui::SetNextWindowSizeConstraints(ImVec2(360, 100), ImVec2(360, 4000));
 			if (ImGui::Begin("Map List")) {
 				ImGui::Columns(4, NULL, false);
 
@@ -256,6 +268,9 @@ void Viewer::Execute() {
 				for (unsigned i = 0; i < mapdatacount_; ++i) {
 					ImGui::PushID(i);
 					if (ImGui::Selectable("##Load", &mapdata_[i].selected, ImGuiSelectableFlags_SpanAllColumns)) {
+						if (currentmap_)
+							currentmap_->selected = false;
+						currentmap_ = &mapdata_[i];
 						SetPMap(mapdata_[i].mapfile);
 					}
 					ImGui::PopID();
@@ -283,20 +298,16 @@ void Viewer::Execute() {
 				}
 			}
 			ImGui::End();
-
 		}
 		
 
 	endRender:
 		ImGui::Render();
 		SDL_GL_SwapWindow(window);
-
-		SDL_Delay(1000 / 60);
 	}
 }
 
 void Viewer::SetPMap(unsigned mapfileid) {
-
 	TCHAR filename[MAX_PATH];
 	_stprintf_s(filename, TEXT("PMAPs\\MAP %010u.pmap"), mapfileid);
 	PathingMap pmap(mapfileid);
@@ -423,6 +434,11 @@ void Viewer::HandleMouseMoveEvent(SDL_MouseMotionEvent motion) {
 
 		refresh_ = true;
 	}
+}
+
+void Viewer::ScreenToWorld(Point2d& out, Point2d& in)
+{
+
 }
 
 void Viewer::HandleMouseWheelEvent(SDL_MouseWheelEvent wheel) {
