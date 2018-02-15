@@ -103,7 +103,7 @@ void ProcessFile(char* file,DWORD hash)
 		CreateDirectory(TEXT("PMAPs"),NULL);
 		char newname[1024];
 		sprintf_s(newname,1024,".\\PMAPs\\MAP %010u.pmap",hash);
-		//pmap.Save(newname);
+		pmap.Save(newname);
 		PathingMapCount++;
 	}
 	for(unsigned int i=0;i<Trapazoids.size();i++)

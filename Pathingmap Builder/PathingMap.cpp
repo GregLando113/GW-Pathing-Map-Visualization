@@ -45,7 +45,7 @@ PathingMap::PathingMap(unsigned long maphash )
 
 bool PathingMap::Save( TCHAR* filename )
 {
-	CompileAdjacentList();
+	//CompileAdjacentList();
 
 	ofstream pmap;
 	pmap.open(filename,ios::binary);
