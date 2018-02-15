@@ -159,14 +159,13 @@ DWORD WINAPI PmapExtractor(LPVOID ab)
 
 void Viewer::Execute() {
 	bool quit = false;
+	auto& io = ImGui::GetIO();
 	while (!quit) {
 		SDL_Delay(1000 / 60);
 
 		// event handling
 		SDL_Event e;
 		while (SDL_PollEvent(&e) != 0) {
-
-			auto& io = ImGui::GetIO();
 			ImGui_ImplSdlGL2_ProcessEvent(&e);
 
 			if (io.WantCaptureMouse || io.WantTextInput)
@@ -248,11 +247,12 @@ void Viewer::Execute() {
 		else {
 
 			if (ImGui::Begin("Info")) {
-				Point2d lel = center_ - translate_;
+				Point2d lel(io.MousePos.x,io.MousePos.y), lel2;
 
+				ScreenToWorld(lel2, lel);
 				ImGui::LabelText("Center", "(%f,%f)", center_.x(), center_.y());
 				ImGui::LabelText("Translate", "(%f,%f)", translate_.x(), translate_.y());
-				ImGui::LabelText("lel", "(%f,%f)", lel.x(), lel.y());
+				ImGui::LabelText("lel", "(%f,%f)", lel2.x(), lel2.y());
 				ImGui::LabelText("W/H", "(%d,%d)", width_, height_);
 				ImGui::LabelText("Scale", "%f", scale_);
 				ImGui::LabelText("Ratio", "%f", ratio_);
@@ -298,8 +298,35 @@ void Viewer::Execute() {
 				}
 			}
 			ImGui::End();
+
+			if (ImGui::Begin("Waypoints")) {
+				if (ImGui::Button("Clear##Waypoints")) {
+					waypoints_.clear();
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Send to Clipboard##Waypoints")) {
+					ImGuiTextBuffer buffer;
+					for (size_t i = 0; i < waypoints_.size(); i++) {
+						auto& p = waypoints_[i];
+						buffer.appendf("(% 06.4f,% 06.4f)\n", p.x(), p.y());
+					}	
+					SDL_SetClipboardText(buffer.c_str());
+				}
+				ImGui::Separator();
+				ImGui::Columns(2, "wpcolumn");
+				ImGui::SetColumnWidth(-1, 50);
+				for (size_t i = 0; i < waypoints_.size(); ++i) {
+					ImGui::Text("%d", i);
+				}
+
+				ImGui::NextColumn();
+				ImGui::SetColumnWidth(-1, 250);
+				for (size_t i = 0; i < waypoints_.size(); ++i) {
+					ImGui::Text("(% 06.4f,% 06.4f)", waypoints_[i].x(), waypoints_[i].y());
+				}
+			}
+			ImGui::End();
 		}
-		
 
 	endRender:
 		ImGui::Render();
@@ -322,6 +349,7 @@ void Viewer::SetPMap(unsigned mapfileid) {
 			max_plane_ = trapezoids_[i].Plane;
 		}
 	}
+	waypoints_.clear();
 	refresh_ = true;
 }
 
@@ -353,6 +381,28 @@ void Viewer::RenderPMap() {
 		glVertex2f(trapezoids_[i].XBL, trapezoids_[i].YB);
 	}
 	glEnd();
+
+	
+	
+	// Render waypoints
+	{
+		glColor3f(0, 0, 1);
+		glBegin(GL_LINE_STRIP);
+		for (size_t i = 0; i < waypoints_.size(); ++i) {
+			Point2d& wp = waypoints_[i];
+			glVertex2f(wp.x(), wp.y());
+		}
+		glEnd();
+
+		for (size_t i = 0; i < waypoints_.size(); ++i) {
+			Point2d& wp = waypoints_[i];
+			glBegin(GL_TRIANGLE_FAN);
+			for (float j = 0; j <= 6.28318; j += (6.28318 / 60)) {
+				glVertex2f(wp.x() + 50 * cos(j), wp.y() + 50 * sin(j));
+			}
+			glEnd();
+		}
+	}
 
 	if (circles_) {
 		glPopMatrix();
@@ -406,6 +456,11 @@ void Viewer::HandleMouseUpEvent(SDL_MouseButtonEvent button) {
 	if (button.button == SDL_BUTTON_LEFT) {
 		mouse_down_ = false;
 	}
+	else if (button.button == SDL_BUTTON_RIGHT) {
+		Point2d pos = Point2d(button.x, button.y);
+		ScreenToWorld(pos, pos);
+		waypoints_.push_back(pos);
+	}
 }
 
 void Viewer::HandleMouseMoveEvent(SDL_MouseMotionEvent motion) {
@@ -438,7 +493,15 @@ void Viewer::HandleMouseMoveEvent(SDL_MouseMotionEvent motion) {
 
 void Viewer::ScreenToWorld(Point2d& out, Point2d& in)
 {
-
+	out = in;
+	out.x() /= width_; // remap from [0, Width] to [0, 1]
+	out.y() /= -height_; // remap from [0, Height] to [0, 1]
+	out.y() += 0.5f;
+	out.x() -= 0.5f;
+	out.y() /= ratio_; // adjust for window aspect ratio
+	out *= 2; // remap from [0, 1]^2 to [0, 2]^2
+	out /= scale_;
+	out -= translate_;
 }
 
 void Viewer::HandleMouseWheelEvent(SDL_MouseWheelEvent wheel) {

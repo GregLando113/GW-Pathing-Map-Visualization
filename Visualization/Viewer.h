@@ -47,6 +47,8 @@ private:
 	GWMapData* currentmap_;
 	unsigned mapdatacount_;
 
+	std::vector<Point2d> waypoints_;
+
 public:
 	Viewer();
 
