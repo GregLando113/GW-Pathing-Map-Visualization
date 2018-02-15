@@ -5,9 +5,17 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 
-#include "../PathingMap.h"
 #include "Point2d.h"
 
+#include "../PathingMap.h"
+
+struct GWMapData {
+	unsigned mapid;
+	char name[0x100];
+	unsigned mapfile;
+	float spawnx;
+	float spawny;
+};
 
 class Viewer {
 private:
@@ -33,17 +41,21 @@ private:
 	double scale_;
 	Point2d translate_;
 	double ratio_;
+	GWMapData* mapdata_;
+	unsigned mapdatacount_;
 
 public:
 	Viewer();
 
 	void InitializeWindow();
 
+	void LoadMapData(const char* file);
+
 	void Resize(int width, int height);
 
 	void Execute();
 
-	void SetPMap(std::vector<PathingMapTrapezoid> trapezoids);
+	void SetPMap(unsigned mapfileid);
 
 	void RenderPMap();
 

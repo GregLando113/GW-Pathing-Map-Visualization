@@ -97,6 +97,7 @@ struct Bounds
 class PathingMap
 {
 public:
+	PathingMap() {}
 	PathingMap(unsigned long maphash);
 	~PathingMap();
 
