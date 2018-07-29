@@ -19,6 +19,13 @@ struct GWMapData {
 	bool visible;
 };
 
+enum MapTool {
+	kToolWaypointer,
+	kToolRuler,
+
+	kToolEnd
+};
+
 class Viewer {
 private:
 	static const int DEFAULT_WIDTH = 800;
@@ -32,6 +39,7 @@ private:
 	int max_plane_;
 
 	bool mouse_down_;
+	bool right_mouse_down_;
 
 	bool refresh_;
 	bool wireframe_;
@@ -47,7 +55,12 @@ private:
 	GWMapData* currentmap_;
 	unsigned mapdatacount_;
 
+	MapTool currTool_;
+	
 	std::vector<Point2d> waypoints_;
+	double waypointDistance_;
+	Point2d rulerPoints_[2];
+
 
 public:
 	Viewer();

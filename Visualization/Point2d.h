@@ -256,6 +256,12 @@ public:
         _x /= n; _y /= n;
         return *this;
     };
+
+	double distanceFrom(const Point2d& v)
+	{
+		Point2d diff = v - *this;
+		return sqrt(diff.x() * diff.x() + diff.y() * diff.y());
+	}
     
     
     //-----------------------------------------------------------------------------

@@ -13,11 +13,13 @@ void DebugWait()
 #endif
 }
 
-Viewer::Viewer() {
+Viewer::Viewer()
+{
 	window = nullptr;
 	trapezoids_ = std::vector<PathingMapTrapezoid>();
 	max_plane_ = 1;
 	mouse_down_ = false;
+	right_mouse_down_ = false;
 	refresh_ = false;
 	scale_ = 0.0001;
 	translate_ = Point2d();
@@ -26,6 +28,7 @@ Viewer::Viewer() {
 	mapdata_ = nullptr;
 	mapdatacount_ = 0;
 	currentmap_ = nullptr;
+	waypointDistance_ = 0;
 
 	int n_vertices = 50;
 	for (int i = 0; i < 50; ++i) {
@@ -256,6 +259,7 @@ void Viewer::Execute() {
 				ImGui::LabelText("W/H", "(%d,%d)", width_, height_);
 				ImGui::LabelText("Scale", "%f", scale_);
 				ImGui::LabelText("Ratio", "%f", ratio_);
+				ImGui::LabelText("Distance", "%f", waypointDistance_);
 			}
 			ImGui::End();
 
@@ -299,33 +303,54 @@ void Viewer::Execute() {
 			}
 			ImGui::End();
 
-			if (ImGui::Begin("Waypoints")) {
-				if (ImGui::Button("Clear##Waypoints")) {
-					waypoints_.clear();
+			if (ImGui::Begin("Toolbox")) {
+				if (ImGui::Button("Waypointer")) {
+					currTool_ = kToolWaypointer;
 				}
-				ImGui::SameLine();
-				if (ImGui::Button("Send to Clipboard##Waypoints")) {
-					ImGuiTextBuffer buffer;
-					for (size_t i = 0; i < waypoints_.size(); i++) {
-						auto& p = waypoints_[i];
-						buffer.appendf("(% 06.4f,% 06.4f)\n", p.x(), p.y());
-					}	
-					SDL_SetClipboardText(buffer.c_str());
-				}
-				ImGui::Separator();
-				ImGui::Columns(2, "wpcolumn");
-				ImGui::SetColumnWidth(-1, 50);
-				for (size_t i = 0; i < waypoints_.size(); ++i) {
-					ImGui::Text("%d", i);
-				}
-
-				ImGui::NextColumn();
-				ImGui::SetColumnWidth(-1, 250);
-				for (size_t i = 0; i < waypoints_.size(); ++i) {
-					ImGui::Text("(% 06.4f,% 06.4f)", waypoints_[i].x(), waypoints_[i].y());
+				if (ImGui::Button("Ruler")) {
+					currTool_ = kToolRuler;
 				}
 			}
 			ImGui::End();
+
+			if (currTool_ == kToolWaypointer) {
+				if (ImGui::Begin("Waypoints")) {
+					if (ImGui::Button("Clear##Waypoints")) {
+						waypointDistance_ = 0;
+						waypoints_.clear();
+					}
+					ImGui::SameLine();
+					if (ImGui::Button("Send to Clipboard##Waypoints")) {
+						ImGuiTextBuffer buffer;
+						for (size_t i = 0; i < waypoints_.size(); i++) {
+							auto& p = waypoints_[i];
+							buffer.appendf("(% 06.4f,% 06.4f)\n", p.x(), p.y());
+						}
+						SDL_SetClipboardText(buffer.c_str());
+					}
+					ImGui::Separator();
+					ImGui::Columns(2, "wpcolumn");
+					ImGui::SetColumnWidth(-1, 50);
+					for (size_t i = 0; i < waypoints_.size(); ++i) {
+						ImGui::Text("%d", i);
+					}
+
+					ImGui::NextColumn();
+					ImGui::SetColumnWidth(-1, 250);
+					for (size_t i = 0; i < waypoints_.size(); ++i) {
+						ImGui::Text("(% 06.4f,% 06.4f)", waypoints_[i].x(), waypoints_[i].y());
+					}
+				}
+				ImGui::End();
+			}
+			else if (currTool_ == kToolRuler) {
+				if (ImGui::Begin("Ruler")) {
+					ImGui::LabelText("Pos1", "(%f,%f)", rulerPoints_[0].x(), rulerPoints_[0].y());
+					ImGui::LabelText("Pos2", "(%f,%f)", rulerPoints_[1].x(), rulerPoints_[1].y());
+					ImGui::LabelText("Distance", "%f", rulerPoints_[0].distanceFrom(rulerPoints_[1]));
+				}
+				ImGui::End();
+			}
 		}
 
 	endRender:
@@ -450,6 +475,11 @@ void Viewer::HandleMouseDownEvent(SDL_MouseButtonEvent button) {
 	if (button.button == SDL_BUTTON_LEFT) {
 		mouse_down_ = true;
 	}
+	else if (button.button == SDL_BUTTON_RIGHT) {
+		rulerPoints_[0] = Point2d(button.x, button.y);
+		ScreenToWorld(rulerPoints_[0], rulerPoints_[0]);
+		right_mouse_down_ = true;
+	}
 }
 
 void Viewer::HandleMouseUpEvent(SDL_MouseButtonEvent button) {
@@ -457,9 +487,19 @@ void Viewer::HandleMouseUpEvent(SDL_MouseButtonEvent button) {
 		mouse_down_ = false;
 	}
 	else if (button.button == SDL_BUTTON_RIGHT) {
-		Point2d pos = Point2d(button.x, button.y);
-		ScreenToWorld(pos, pos);
-		waypoints_.push_back(pos);
+		right_mouse_down_ = false;
+		if (currTool_ == kToolWaypointer) {
+			Point2d pos = Point2d(button.x, button.y);
+			ScreenToWorld(pos, pos);
+			if (waypoints_.size() > 0) {
+				Point2d prev_wp_diff = waypoints_[waypoints_.size() - 1] - pos;
+				waypointDistance_ += sqrt((prev_wp_diff.x() * prev_wp_diff.x()) + (prev_wp_diff.y() * prev_wp_diff.y()));
+			}
+			waypoints_.push_back(pos);
+		}	
+		else if (currTool_ == kToolRuler) {
+
+		}
 	}
 }
 
